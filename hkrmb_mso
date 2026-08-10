@@ -1,0 +1,1136 @@
+# MSO
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>找換紀錄管理系統</title>
+    <!-- 引入 SheetJS 庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 13px;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #f5f5f5;
+            color: #333;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 130px;
+            background-color: #ffffff;
+            border-right: 1px solid #e8e8e8;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-item {
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            color: #ffffff;
+            background-color: #e54d53;
+            text-decoration: none;
+            cursor: pointer;
+            border-left: 3px solid #b32429;
+            font-weight: bold;
+        }
+
+        .sidebar-icon {
+            margin-right: 8px;
+            font-size: 14px;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #f7a3a6;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            background: transparent;
+            flex-wrap: wrap;
+        }
+
+        .filter-control {
+            height: 30px;
+            border: 1px solid #ddd;
+            border-radius: 2px;
+            padding: 0 8px;
+            background: white;
+            outline: none;
+        }
+
+        select.filter-control {
+            min-width: 130px;
+        }
+
+        .search-input {
+            width: 140px;
+        }
+
+        .btn-excel {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 0 12px;
+            height: 30px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: auto;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+        }
+
+        .btn-excel:hover { background-color: #219653; }
+
+        .btn-share {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            padding: 0 12px;
+            height: 30px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+        }
+
+        .btn-share:hover { background-color: #1f618d; }
+
+        .btn-clear {
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            padding: 0 10px;
+            height: 30px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+        }
+
+        .btn-clear:hover { background-color: #c9302c; }
+
+        #excel-file-input { display: none; }
+
+        .content-body {
+            flex: 1;
+            display: flex;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .table-wrapper {
+            flex: 1;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .table-scroll {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .data-table th {
+            background-color: #e54d53;
+            color: white;
+            padding: 8px 12px;
+            font-weight: normal;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .data-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+            color: #444;
+        }
+
+        .data-table tbody tr { cursor: pointer; }
+        .data-table tbody tr:hover { background-color: #fff0f0; }
+        .data-table tbody tr.selected { background-color: #f7cbca !important; }
+
+        .text-right { text-align: right; }
+
+        .pagination-bar {
+            height: 40px;
+            background-color: #f7a3a6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            user-select: none;
+            padding: 5px 0;
+        }
+
+        .page-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 2px 6px;
+            font-size: 14px;
+        }
+
+        .page-num {
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .page-num.active {
+            background-color: #e54d53;
+            color: white;
+            font-weight: bold;
+        }
+
+        .page-input {
+            width: 45px;
+            height: 24px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .detail-panel {
+            width: 320px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .panel-header {
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            color: #333;
+            font-weight: normal;
+        }
+
+        .panel-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-delete-icon {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .btn-delete-icon:hover { background-color: #c0392b; }
+
+        .btn-close-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            font-size: 16px;
+            padding: 0 4px;
+        }
+
+        .btn-close-icon:hover { color: #333; }
+
+        .panel-content {
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .detail-row {
+            display: flex;
+            line-height: 1.4;
+        }
+
+        .detail-label {
+            width: 100px;
+            color: #666;
+            flex-shrink: 0;
+        }
+
+        .detail-value {
+            color: #333;
+            flex: 1;
+            word-break: break-all;
+        }
+
+        .link-text {
+            color: #0056b3;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .link-text:hover { color: #003366; }
+
+        .empty-tip {
+            text-align: center;
+            padding: 60px 0;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-item"><span class="sidebar-icon">⇆</span>找換紀錄</div>
+    </div>
+
+    <div class="main-container">
+        <div class="filter-bar">
+            <!-- 8 間分店選單 -->
+            <select id="branch-filter" class="filter-control" onchange="applyFilters()">
+                <option value="ALL">全部分店 (8間)</option>
+                <option value="(61SH) 上環">(61SH) 上環</option>
+                <option value="(62SH) 荃灣">(62SH) 荃灣</option>
+                <option value="(63SH) 觀塘">(63SH) 觀塘</option>
+                <option value="(64SH) 紅磡">(64SH) 紅磡</option>
+                <option value="(65SH) 大埔">(65SH) 大埔</option>
+                <option value="(66SH) 屯門">(66SH) 屯門</option>
+                <option value="(67SH) 旺角">(67SH) 旺角</option>
+                <option value="(68SH) 沙田">(68SH) 沙田</option>
+            </select>
+
+            <input type="text" id="search-keyword" class="filter-control search-input" placeholder="🔍 搜尋單號/姓名/電話" oninput="applyFilters()">
+
+            <input type="date" id="date-from" class="filter-control" onchange="applyFilters()">
+            <span style="color: #666;">至</span>
+            <input type="date" id="date-to" class="filter-control" onchange="applyFilters()">
+
+            <select id="status-filter" class="filter-control" onchange="applyFilters()">
+                <option value="ALL">全部狀態</option>
+                <option value="生效中">生效中</option>
+                <option value="已取消">已取消</option>
+            </select>
+
+            <button class="btn-excel" onclick="triggerFileInput()">📂 匯入 EXCEL</button>
+            <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" onchange="handleExcelImport(event)">
+
+            <button class="btn-share" onclick="exportEmbeddedHTML()">💾 匯出</button>
+
+            <button class="btn-clear" onclick="clearStoredData()">🗑️ 清空數據</button>
+        </div>
+
+        <div class="content-body">
+            <div class="table-wrapper">
+                <div class="table-scroll">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>找換時間</th>
+                                <th>分店</th>
+                                <th>客戶名稱</th>
+                                <th class="text-right">買入</th>
+                                <th class="text-right">賣出</th>
+                                <th class="text-right">兌換率</th>
+                                <th class="text-right">利潤</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="pagination-bar">
+                    <button class="page-btn" onclick="goToPage(1)">&lt;&lt;</button>
+                    <button class="page-btn" onclick="goToPage(currentPage - 1)">&lt;</button>
+                    <div id="page-numbers" style="display:flex; gap: 4px;"></div>
+                    <button class="page-btn" onclick="goToPage(currentPage + 1)">&gt;</button>
+                    <button class="page-btn" onclick="goToPage(totalPages)">&gt;&gt;</button>
+                    <input type="text" id="page-jump" class="page-input" value="1" onchange="goToPage(parseInt(this.value))">
+                    <span style="color:white;" id="total-count-label">/ 0</span>
+                </div>
+            </div>
+
+            <!-- 右側詳情面板 -->
+            <div class="detail-panel">
+                <div class="panel-header">
+                    <span class="panel-title">找換詳情</span>
+                    <div class="panel-actions">
+                        <button class="btn-delete-icon" title="刪除" onclick="deleteCurrentRecord()">🗑</button>
+                        <button class="btn-close-icon" title="關閉" onclick="deselectRecord()">✖</button>
+                    </div>
+                </div>
+                <div class="panel-content" id="detail-content">
+                    <div class="empty-tip">請點擊列表查看詳情</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SECURITY_PASSWORD = '888';
+
+        let records = [];
+        let filteredRecords = [];
+        let currentPage = 1;
+        const pageSize = 15;
+        let totalPages = 1;
+        let selectedRecordId = null;
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open("ExchangeRecordDB_v3", 1);
+                request.onupgradeneeded = function(e) {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains("records")) {
+                        db.createObjectStore("records", { keyPath: "id" });
+                    }
+                };
+                request.onsuccess = e => resolve(e.target.result);
+                request.onerror = e => reject(e);
+            });
+        }
+
+        async function saveRecordsToStorage() {
+            try {
+                const db = await openDB();
+                const tx = db.transaction("records", "readwrite");
+                const store = tx.objectStore("records");
+                
+                await new Promise((resolve, reject) => {
+                    const clearReq = store.clear();
+                    clearReq.onsuccess = resolve;
+                    clearReq.onerror = reject;
+                });
+
+                for (const item of records) {
+                    store.put(item);
+                }
+            } catch (e) {
+                console.error("保存失敗:", e);
+            }
+        }
+
+        async function initData() {
+            try {
+                const db = await openDB();
+                const tx = db.transaction("records", "readonly");
+                const store = tx.objectStore("records");
+                const request = store.getAll();
+
+                request.onsuccess = function() {
+                    if (request.result && request.result.length > 0) {
+                        records = request.result;
+                    }
+                    applyFilters();
+                };
+            } catch (e) {
+                records = [];
+                applyFilters();
+            }
+        }
+
+        function triggerFileInput() {
+            if (typeof XLSX === 'undefined') {
+                alert('⚠️ 警告：無法載入 Excel 解析庫，請確認電腦是否已連網！');
+                return;
+            }
+            const fileInput = document.getElementById('excel-file-input');
+            fileInput.value = '';
+            fileInput.click();
+        }
+
+        function formatExcelDate(rawDate) {
+            if (!rawDate) return '';
+            if (typeof rawDate === 'string') return rawDate;
+            
+            const num = parseFloat(rawDate);
+            if (isNaN(num)) return rawDate;
+
+            const utc_days = Math.floor(num - 25569);
+            const utc_value = utc_days * 86400;
+            const date_info = new Date(utc_value * 1000);
+
+            const fractional_day = num - Math.floor(num) + 0.0000001;
+            let total_seconds = Math.floor(86400 * fractional_day);
+
+            const seconds = total_seconds % 60;
+            total_seconds -= seconds;
+
+            const hours = Math.floor(total_seconds / 3600);
+            const minutes = Math.floor((total_seconds / 60) % 60);
+
+            const year = date_info.getUTCFullYear();
+            const month = String(date_info.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date_info.getUTCDate()).padStart(2, '0');
+            const hrs = String(hours).padStart(2, '0');
+            const mins = String(minutes).padStart(2, '0');
+            const secs = String(seconds).padStart(2, '0');
+
+            return `${year}-${month}-${day} ${hrs}:${mins}:${secs}`;
+        }
+
+        function cleanNumber(val) {
+            if (val === null || val === undefined || val === '') return 0;
+            if (typeof val === 'number') return val;
+            const str = String(val).replace(/[^0-9.-]/g, '');
+            const num = parseFloat(str);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function formatNumberClean(val) {
+            const num = cleanNumber(val);
+            return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function getCalculatedRate(item) {
+            const buy = cleanNumber(item.buyAmount);
+            const sell = cleanNumber(item.sellAmount);
+            if (buy > 0) return (sell / buy).toFixed(4);
+            return '1.0000';
+        }
+
+        function getCalculatedProfit(item) {
+            const buy = cleanNumber(item.buyAmount);
+            const sell = cleanNumber(item.sellAmount);
+            if (item.sellCurr === '港幣' || item.sellCurr === 'HKD') {
+                return Number((sell * 0.012).toFixed(2));
+            } else if (item.buyCurr === '港幣' || item.buyCurr === 'HKD') {
+                return Number((buy * 0.012).toFixed(2));
+            }
+            return Number(Math.abs(sell - buy).toFixed(2));
+        }
+
+        function applyFilters() {
+            const branch = document.getElementById('branch-filter').value;
+            const searchInput = document.getElementById('search-keyword');
+            const keyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            const dateFrom = document.getElementById('date-from').value;
+            const dateTo = document.getElementById('date-to').value;
+            const status = document.getElementById('status-filter').value;
+
+            filteredRecords = records.filter(item => {
+                if (branch !== 'ALL' && item.branch !== branch) return false;
+                if (status !== 'ALL' && item.status !== status) return false;
+
+                if (keyword) {
+                    const matchId = (item.id || '').toLowerCase().includes(keyword);
+                    const matchName = (item.name || '').toLowerCase().includes(keyword);
+                    const matchPhone = (item.phone || '').toLowerCase().includes(keyword);
+                    const matchIdentity = (item.identity || '').toLowerCase().includes(keyword);
+                    if (!matchId && !matchName && !matchPhone && !matchIdentity) return false;
+                }
+
+                const formattedTime = formatExcelDate(item.time);
+                const itemDateStr = formattedTime.split(' ')[0];
+
+                if (dateFrom && itemDateStr < dateFrom) return false;
+                if (dateTo && itemDateStr > dateTo) return false;
+
+                return true;
+            });
+
+            totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageData = filteredRecords.slice(start, end);
+
+            pageData.forEach(item => {
+                const tr = document.createElement('tr');
+                if (item.id === selectedRecordId) {
+                    tr.classList.add('selected');
+                }
+
+                tr.onclick = () => selectRecord(item.id);
+
+                const rate = getCalculatedRate(item);
+                const profit = getCalculatedProfit(item);
+
+                const buyDisplay = item.buyCurr ? `${item.buyCurr} $${formatNumberClean(item.buyAmount)}` : `$${formatNumberClean(item.buyAmount)}`;
+                const sellDisplay = item.sellCurr ? `${item.sellCurr} $${formatNumberClean(item.sellAmount)}` : `$${formatNumberClean(item.sellAmount)}`;
+
+                tr.innerHTML = `
+                    <td>${formatExcelDate(item.time)}</td>
+                    <td>${item.branch || ''}</td>
+                    <td>${item.name || ''}</td>
+                    <td class="text-right">${buyDisplay}</td>
+                    <td class="text-right">${sellDisplay}</td>
+                    <td class="text-right">${rate}</td>
+                    <td class="text-right">$${formatNumberClean(profit)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            renderPagination();
+            renderDetailPanel();
+        }
+
+        function renderPagination() {
+            const container = document.getElementById('page-numbers');
+            container.innerHTML = '';
+
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            if (endPage - startPage < 4) {
+                startPage = Math.max(1, endPage - 4);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const span = document.createElement('span');
+                span.className = `page-num ${i === currentPage ? 'active' : ''}`;
+                span.innerText = i;
+                span.onclick = () => goToPage(i);
+                container.appendChild(span);
+            }
+
+            document.getElementById('page-jump').value = currentPage;
+            document.getElementById('total-count-label').innerText = `/ ${filteredRecords.length}`;
+        }
+
+        function goToPage(page) {
+            if (page < 1) page = 1;
+            if (page > totalPages) page = totalPages;
+            currentPage = page;
+            renderTable();
+        }
+
+        function selectRecord(id) {
+            selectedRecordId = id;
+            renderTable();
+        }
+
+        function deselectRecord() {
+            selectedRecordId = null;
+            renderTable();
+        }
+
+        function updateCustomerInfoAction(recordId) {
+            alert('觸發更新客戶資料功能');
+        }
+
+        function renderDetailPanel() {
+            const panel = document.getElementById('detail-content');
+            if (!selectedRecordId) {
+                panel.innerHTML = '<div class="empty-tip">請點擊列表查看詳情</div>';
+                return;
+            }
+
+            const record = records.find(r => r.id === selectedRecordId);
+            if (!record) {
+                panel.innerHTML = '<div class="empty-tip">找不到此紀錄</div>';
+                return;
+            }
+
+            const buyRate = record.buyRate || '1.0000';
+            const sellRate = record.sellRate || getCalculatedRate(record);
+            const profit = getCalculatedProfit(record);
+
+            const buyCurrStr = record.buyCurr || '港幣';
+            const sellCurrStr = record.sellCurr || '日元 JPY';
+
+            panel.innerHTML = `
+                <div class="detail-row"><div class="detail-label">找換時間:</div><div class="detail-value">${formatExcelDate(record.time)}</div></div>
+                <div class="detail-row"><div class="detail-label">分店:</div><div class="detail-value">${record.branch || ''}</div></div>
+                <div class="detail-row"><div class="detail-label">找換單號:</div><div class="detail-value">${record.id || ''}</div></div>
+                <div class="detail-row"><div class="detail-label">客戶編號:</div><div class="detail-value"><span class="link-text" onclick="updateCustomerInfoAction('${record.id}')">按此更新客戶資料</span></div></div>
+                <div class="detail-row"><div class="detail-label">客戶名稱:</div><div class="detail-value">${record.name || ''}</div></div>
+                <div class="detail-row"><div class="detail-label">客戶電話:</div><div class="detail-value">${record.phone || '--'}</div></div>
+                <div class="detail-row"><div class="detail-label">買入金額:</div><div class="detail-value">${buyCurrStr} $${formatNumberClean(record.buyAmount)}</div></div>
+                <div class="detail-row"><div class="detail-label">買入兌換率:</div><div class="detail-value">${buyRate}</div></div>
+                <div class="detail-row"><div class="detail-label">賣出金額:</div><div class="detail-value">${sellCurrStr} $${formatNumberClean(record.sellAmount)}</div></div>
+                <div class="detail-row"><div class="detail-label">賣出兌換率:</div><div class="detail-value">${sellRate}</div></div>
+                <div class="detail-row"><div class="detail-label">利潤:</div><div class="detail-value">$${formatNumberClean(profit)}</div></div>
+                <div class="detail-row"><div class="detail-label">備註:</div><div class="detail-value"></div></div>
+            `;
+        }
+
+        async function deleteCurrentRecord() {
+            if (!selectedRecordId) {
+                alert('請先點擊列表選擇要刪除的紀錄！');
+                return;
+            }
+
+            const pwd = prompt('請輸入刪除密碼：');
+            if (pwd === SECURITY_PASSWORD) {
+                records = records.filter(r => r.id !== selectedRecordId);
+                await saveRecordsToStorage();
+                selectedRecordId = null;
+                applyFilters();
+                alert('該筆紀錄已刪除！');
+            } else if (pwd !== null) {
+                alert('密碼錯誤！無法刪除。');
+            }
+        }
+
+        async function clearStoredData() {
+            const pwd = prompt('⚠️ 請輸入授權密碼以清空數據：');
+            if (pwd === SECURITY_PASSWORD) {
+                records = [];
+                try {
+                    const db = await openDB();
+                    const tx = db.transaction("records", "readwrite");
+                    tx.objectStore("records").clear();
+                } catch(e) {}
+                selectedRecordId = null;
+                applyFilters();
+                alert('所有紀錄已清空！');
+            } else if (pwd !== null) {
+                alert('密碼錯誤！操作取消。');
+            }
+        }
+
+        // 匯出獨立網頁檔 (HTML)
+        function exportEmbeddedHTML() {
+            const branchSelect = document.getElementById('branch-filter').value;
+            if (branchSelect === 'ALL') {
+                alert('⚠️ 請先在左上角選擇要匯出的「指定分店」（例如：(61SH) 上環）！');
+                return;
+            }
+
+            if (filteredRecords.length === 0) {
+                alert('⚠️ 目前選擇的分店沒有可匯出的數據！');
+                return;
+            }
+
+            const exportData = JSON.stringify(filteredRecords);
+            const branchName = branchSelect;
+
+            const htmlDocument = `<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>找換紀錄 - ${branchName}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 13px; }
+        body { display: flex; height: 100vh; background-color: #f5f5f5; color: #333; overflow: hidden; }
+        .sidebar { width: 130px; background-color: #ffffff; border-right: 1px solid #e8e8e8; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-item { padding: 14px 16px; display: flex; align-items: center; color: #ffffff; background-color: #e54d53; text-decoration: none; font-weight: bold; }
+        .sidebar-icon { margin-right: 8px; font-size: 14px; }
+        .main-container { flex: 1; display: flex; flex-direction: column; background-color: #f7a3a6; padding: 10px; overflow: hidden; }
+        .filter-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; background: transparent; flex-wrap: wrap; }
+        .filter-control { height: 30px; border: 1px solid #ddd; border-radius: 2px; padding: 0 8px; background: white; outline: none; }
+        select.filter-control { min-width: 130px; }
+        .content-body { flex: 1; display: flex; gap: 10px; overflow: hidden; }
+        .table-wrapper { flex: 1; background: white; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .table-scroll { flex: 1; overflow-y: auto; }
+        .data-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .data-table th { background-color: #e54d53; color: white; padding: 8px 12px; font-weight: normal; position: sticky; top: 0; z-index: 2; }
+        .data-table td { padding: 8px 12px; border-bottom: 1px solid #eee; color: #444; }
+        .data-table tbody tr { cursor: pointer; }
+        .data-table tbody tr:hover { background-color: #fff0f0; }
+        .data-table tbody tr.selected { background-color: #f7cbca !important; }
+        .text-right { text-align: right; }
+        .pagination-bar { height: 40px; background-color: #f7a3a6; display: flex; align-items: center; justify-content: center; gap: 8px; user-select: none; padding: 5px 0; }
+        .page-btn { background: transparent; border: none; color: white; cursor: pointer; padding: 2px 6px; font-size: 14px; }
+        .page-num { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; cursor: pointer; color: #333; }
+        .page-num.active { background-color: #e54d53; color: white; font-weight: bold; }
+        .page-input { width: 45px; height: 24px; text-align: center; border: 1px solid #ccc; border-radius: 2px; outline: none; }
+        .detail-panel { width: 320px; background: white; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .panel-header { padding: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f0f0f0; }
+        .panel-title { font-size: 16px; color: #333; font-weight: normal; }
+        .panel-content { padding: 20px 16px; display: flex; flex-direction: column; gap: 14px; }
+        .detail-row { display: flex; line-height: 1.4; }
+        .detail-label { width: 100px; color: #666; flex-shrink: 0; }
+        .detail-value { color: #333; flex: 1; word-break: break-all; }
+        .link-text { color: #0056b3; text-decoration: underline; cursor: pointer; }
+        .empty-tip { text-align: center; padding: 60px 0; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-item"><span class="sidebar-icon">⇆</span>找換紀錄</div>
+    </div>
+    <div class="main-container">
+        <div class="filter-bar">
+            <select id="branch-filter" class="filter-control" disabled>
+                <option value="${branchName}">${branchName}</option>
+            </select>
+            <input type="date" id="date-from" class="filter-control" onchange="applyFilters()">
+            <span style="color: #666;">至</span>
+            <input type="date" id="date-to" class="filter-control" onchange="applyFilters()">
+            <select id="status-filter" class="filter-control" onchange="applyFilters()">
+                <option value="ALL">全部狀態</option>
+                <option value="生效中">生效中</option>
+                <option value="已取消">已取消</option>
+            </select>
+        </div>
+        <div class="content-body">
+            <div class="table-wrapper">
+                <div class="table-scroll">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>找換時間</th>
+                                <th>分店</th>
+                                <th>客戶名稱</th>
+                                <th class="text-right">買入</th>
+                                <th class="text-right">賣出</th>
+                                <th class="text-right">兌換率</th>
+                                <th class="text-right">利潤</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                </div>
+                <div class="pagination-bar">
+                    <button class="page-btn" onclick="goToPage(1)">&lt;&lt;</button>
+                    <button class="page-btn" onclick="goToPage(currentPage - 1)">&lt;</button>
+                    <div id="page-numbers" style="display:flex; gap: 4px;"></div>
+                    <button class="page-btn" onclick="goToPage(currentPage + 1)">&gt;</button>
+                    <button class="page-btn" onclick="goToPage(totalPages)">&gt;&gt;</button>
+                    <input type="text" id="page-jump" class="page-input" value="1" onchange="goToPage(parseInt(this.value))">
+                    <span style="color:white;" id="total-count-label">/ 0</span>
+                </div>
+            </div>
+            <div class="detail-panel">
+                <div class="panel-header"><span class="panel-title">找換詳情</span></div>
+                <div class="panel-content" id="detail-content"><div class="empty-tip">請點擊列表查看詳情</div></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const records = ${exportData};
+        let filteredRecords = [...records];
+        let currentPage = 1;
+        const pageSize = 15;
+        let totalPages = 1;
+        let selectedRecordId = null;
+
+        function cleanNumber(val) {
+            if (val === null || val === undefined || val === '') return 0;
+            if (typeof val === 'number') return val;
+            const num = parseFloat(String(val).replace(/[^0-9.-]/g, ''));
+            return isNaN(num) ? 0 : num;
+        }
+
+        function formatNumberClean(val) {
+            return cleanNumber(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function getCalculatedRate(item) {
+            const buy = cleanNumber(item.buyAmount);
+            const sell = cleanNumber(item.sellAmount);
+            return buy > 0 ? (sell / buy).toFixed(4) : '1.0000';
+        }
+
+        function getCalculatedProfit(item) {
+            const buy = cleanNumber(item.buyAmount);
+            const sell = cleanNumber(item.sellAmount);
+            if (item.sellCurr === '港幣' || item.sellCurr === 'HKD') return Number((sell * 0.012).toFixed(2));
+            if (item.buyCurr === '港幣' || item.buyCurr === 'HKD') return Number((buy * 0.012).toFixed(2));
+            return Number(Math.abs(sell - buy).toFixed(2));
+        }
+
+        function applyFilters() {
+            const dateFrom = document.getElementById('date-from').value;
+            const dateTo = document.getElementById('date-to').value;
+            const status = document.getElementById('status-filter').value;
+
+            filteredRecords = records.filter(item => {
+                if (status !== 'ALL' && item.status !== status) return false;
+                const itemDateStr = String(item.time).split(' ')[0];
+                if (dateFrom && itemDateStr < dateFrom) return false;
+                if (dateTo && itemDateStr > dateTo) return false;
+                return true;
+            });
+
+            totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            const start = (currentPage - 1) * pageSize;
+            const pageData = filteredRecords.slice(start, start + pageSize);
+
+            pageData.forEach(item => {
+                const tr = document.createElement('tr');
+                if (item.id === selectedRecordId) tr.classList.add('selected');
+                tr.onclick = () => { selectedRecordId = item.id; renderTable(); };
+                const rate = getCalculatedRate(item);
+                const profit = getCalculatedProfit(item);
+                const buyDisplay = item.buyCurr ? \`\${item.buyCurr} $\${formatNumberClean(item.buyAmount)}\` : \`$\${formatNumberClean(item.buyAmount)}\`;
+                const sellDisplay = item.sellCurr ? \`\${item.sellCurr} $\${formatNumberClean(item.sellAmount)}\` : \`$\${formatNumberClean(item.sellAmount)}\`;
+
+                tr.innerHTML = \`
+                    <td>\${item.time || ''}</td>
+                    <td>\${item.branch || ''}</td>
+                    <td>\${item.name || ''}</td>
+                    <td class="text-right">\${buyDisplay}</td>
+                    <td class="text-right">\${sellDisplay}</td>
+                    <td class="text-right">\${rate}</td>
+                    <td class="text-right">$\${formatNumberClean(profit)}</td>
+                \`;
+                tbody.appendChild(tr);
+            });
+
+            renderPagination();
+            renderDetailPanel();
+        }
+
+        function renderPagination() {
+            const container = document.getElementById('page-numbers');
+            container.innerHTML = '';
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+            for (let i = startPage; i <= endPage; i++) {
+                const span = document.createElement('span');
+                span.className = \`page-num \${i === currentPage ? 'active' : ''}\`;
+                span.innerText = i;
+                span.onclick = () => goToPage(i);
+                container.appendChild(span);
+            }
+            document.getElementById('page-jump').value = currentPage;
+            document.getElementById('total-count-label').innerText = \`/ \${filteredRecords.length}\`;
+        }
+
+        function goToPage(page) {
+            if (page < 1) page = 1;
+            if (page > totalPages) page = totalPages;
+            currentPage = page;
+            renderTable();
+        }
+
+        function renderDetailPanel() {
+            const panel = document.getElementById('detail-content');
+            if (!selectedRecordId) {
+                panel.innerHTML = '<div class="empty-tip">請點擊列表查看詳情</div>';
+                return;
+            }
+            const record = records.find(r => r.id === selectedRecordId);
+            if (!record) return;
+
+            const buyRate = record.buyRate || '1.0000';
+            const sellRate = record.sellRate || getCalculatedRate(record);
+            const profit = getCalculatedProfit(record);
+
+            panel.innerHTML = \`
+                <div class="detail-row"><div class="detail-label">找換時間:</div><div class="detail-value">\${record.time || ''}</div></div>
+                <div class="detail-row"><div class="detail-label">分店:</div><div class="detail-value">\${record.branch || ''}</div></div>
+                <div class="detail-row"><div class="detail-label">找換單號:</div><div class="detail-value">\${record.id || ''}</div></div>
+                <div class="detail-row"><div class="detail-label">客戶編號:</div><div class="detail-value"><span class="link-text">按此更新客戶資料</span></div></div>
+                <div class="detail-row"><div class="detail-label">客戶名稱:</div><div class="detail-value">\${record.name || ''}</div></div>
+                <div class="detail-row"><div class="detail-label">客戶電話:</div><div class="detail-value">\${record.phone || '--'}</div></div>
+                <div class="detail-row"><div class="detail-label">買入金額:</div><div class="detail-value">\${record.buyCurr || '港幣'} $\${formatNumberClean(record.buyAmount)}</div></div>
+                <div class="detail-row"><div class="detail-label">買入兌換率:</div><div class="detail-value">\${buyRate}</div></div>
+                <div class="detail-row"><div class="detail-label">賣出金額:</div><div class="detail-value">\${record.sellCurr || '日元 JPY'} $\${formatNumberClean(record.sellAmount)}</div></div>
+                <div class="detail-row"><div class="detail-label">賣出兌換率:</div><div class="detail-value">\${sellRate}</div></div>
+                <div class="detail-row"><div class="detail-label">利潤:</div><div class="detail-value">$\${formatNumberClean(profit)}</div></div>
+                <div class="detail-row"><div class="detail-label">備註:</div><div class="detail-value"></div></div>
+            \`;
+        }
+
+        window.onload = applyFilters;
+    <\/script>
+</body>
+</html>`;
+
+            const blob = new Blob([htmlDocument], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `找換紀錄_${branchName}_${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            alert(`✅ 已成功匯出 [${branchName}]！`);
+        }
+
+        function handleExcelImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(evt) {
+                try {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                    
+                    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                        alert('❌ 讀取失敗：Excel 檔案內沒有工作表！');
+                        return;
+                    }
+
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+                    if (!jsonData || jsonData.length < 1) {
+                        alert('❌ 讀取失敗：Excel 檔案內沒有數據！');
+                        return;
+                    }
+
+                    const firstRowStr = jsonData[0].map(c => String(c).toLowerCase()).join(' ');
+                    const hasHeader = firstRowStr.includes('分店') || firstRowStr.includes('時間') || firstRowStr.includes('單號') || firstRowStr.includes('買');
+
+                    let colIdx = { branch: 0, id: 1, time: 2, identity: 3, phone: 4, buyCurr: 5, buyAmount: 6, sellCurr: 7, sellAmount: 8 };
+
+                    if (hasHeader) {
+                        const header = jsonData[0].map(h => String(h).trim().toLowerCase());
+                        const idxBranch = header.findIndex(h => h.includes('店'));
+                        if (idxBranch !== -1) colIdx.branch = idxBranch;
+
+                        const idxId = header.findIndex(h => h.includes('單') || h.includes('編號'));
+                        if (idxId !== -1) colIdx.id = idxId;
+
+                        const idxTime = header.findIndex(h => h.includes('時間') || h.includes('日'));
+                        if (idxTime !== -1) colIdx.time = idxTime;
+
+                        const idxIdentity = header.findIndex(h => h.includes('身份') || h.includes('名') || h.includes('客'));
+                        if (idxIdentity !== -1) colIdx.identity = idxIdentity;
+
+                        const idxPhone = header.findIndex(h => h.includes('話') || h.includes('tel') || h.includes('phone'));
+                        if (idxPhone !== -1) colIdx.phone = idxPhone;
+
+                        const idxBuyCurr = header.findIndex(h => h.includes('買') && h.includes('幣'));
+                        if (idxBuyCurr !== -1) colIdx.buyCurr = idxBuyCurr;
+
+                        const idxBuyAmount = header.findIndex(h => (h.includes('買') && h.includes('金')) || h === '買入');
+                        if (idxBuyAmount !== -1) colIdx.buyAmount = idxBuyAmount;
+
+                        const idxSellCurr = header.findIndex(h => h.includes('賣') && h.includes('幣'));
+                        if (idxSellCurr !== -1) colIdx.sellCurr = idxSellCurr;
+
+                        const idxSellAmount = header.findIndex(h => (h.includes('賣') && h.includes('金')) || h === '賣出');
+                        if (idxSellAmount !== -1) colIdx.sellAmount = idxSellAmount;
+                    }
+
+                    const startIndex = hasHeader ? 1 : 0;
+                    const imported = [];
+
+                    for (let i = startIndex; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || row.length === 0) continue;
+
+                        const hasValue = row.some(cell => cell !== null && cell !== undefined && cell !== '');
+                        if (!hasValue) continue;
+
+                        const branchVal = row[colIdx.branch] || '';
+                        const idVal = row[colIdx.id] || ('ID_' + Math.random().toString(36).substr(2, 6).toUpperCase());
+                        let timeVal = row[colIdx.time] || '';
+                        
+                        if (timeVal instanceof Date) {
+                            const y = timeVal.getFullYear();
+                            const m = String(timeVal.getMonth() + 1).padStart(2, '0');
+                            const d = String(timeVal.getDate()).padStart(2, '0');
+                            const hh = String(timeVal.getHours()).padStart(2, '0');
+                            const mm = String(timeVal.getMinutes()).padStart(2, '0');
+                            const ss = String(timeVal.getSeconds()).padStart(2, '0');
+                            timeVal = `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+                        }
+
+                        const identityVal = row[colIdx.identity] || '';
+                        const phoneVal = row[colIdx.phone] || '';
+                        const buyCurrVal = row[colIdx.buyCurr] || '';
+                        const buyAmtVal = cleanNumber(row[colIdx.buyAmount]);
+                        const sellCurrVal = row[colIdx.sellCurr] || '';
+                        const sellAmtVal = cleanNumber(row[colIdx.sellAmount]);
+
+                        imported.push({
+                            branch: String(branchVal).trim(),
+                            id: String(idVal).trim(),
+                            time: timeVal,
+                            name: String(identityVal).trim(),
+                            identity: String(identityVal).trim(),
+                            phone: String(phoneVal).trim(),
+                            buyCurr: String(buyCurrVal).trim(),
+                            buyAmount: buyAmtVal,
+                            sellCurr: String(sellCurrVal).trim(),
+                            sellAmount: sellAmtVal,
+                            status: '生效中',
+                            remark: ''
+                        });
+                    }
+
+                    if (imported.length === 0) {
+                        alert('⚠️ 未能提取到有效的數據行！');
+                        return;
+                    }
+
+                    records = imported;
+                    await saveRecordsToStorage();
+
+                    document.getElementById('branch-filter').value = 'ALL';
+                    if (document.getElementById('search-keyword')) {
+                        document.getElementById('search-keyword').value = '';
+                    }
+                    document.getElementById('date-from').value = '';
+                    document.getElementById('date-to').value = '';
+                    document.getElementById('status-filter').value = 'ALL';
+
+                    applyFilters();
+                    alert(`✅ 成功匯入 ${imported.length} 條紀錄！`);
+
+                } catch (err) {
+                    console.error(err);
+                    alert('❌ 解析 Excel 時發生錯誤：' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        window.onload = initData;
+    </script>
+</body>
+</html>
